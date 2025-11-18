@@ -3,7 +3,7 @@ from pathlib import Path
 
 # === CẤU HÌNH ===
 dataset_root = Path(r".")  # thư mục gốc chứa train/valid/test
-folders = ["train", "valid", "test"]
+folders = ["train", "val", "test"]
 
 # === HÀM KIỂM TRA ===
 def check_missing(folder_path):
