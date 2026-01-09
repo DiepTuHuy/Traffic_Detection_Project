@@ -1,0 +1,29 @@
+=== CLASS ID CỦA CÁC PHẦN ĐỘC LẬP TRONG classes.txt ===
+
+ID 34: B.8a
+ID 31: Camera
+ID 45: I.407a
+ID 11: I.409
+ID 8: I.434a
+ID 14: P.106a*Xe tải
+ID 18: P.107
+ID 23: P.111
+ID 16: P.117*
+ID 17: P.124a*
+ID 47: P.124b1
+ID 19: P.124d
+ID 41: P.127*40
+ID 38: P.127*50
+ID 39: P.127*60
+ID 40: P.127*80
+ID 24: P.129
+ID 36: P.139
+ID 12: R.415a
+ID 25: S.505a*Xe máy
+ID 30: S.505a*Xe tải
+ID 28: S.505a*Xe tải và công
+ID 1: W.205c
+ID 5: W.207
+ID 43: W.239b*
+ID 26: W.246a
+ID 51: W.246c

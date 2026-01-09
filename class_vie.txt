@@ -1,0 +1,64 @@
+Hết tất cả các lệnh cấm
+Cấm đi ngược chiều
+Cấm ô tô
+Biển cấm ô tô rẽ phải
+Biển báo cấm ô tô rẽ trái
+Cấm mô tô và xe máy
+Cấm xe tải
+Cấm xe tải trên 4 tấn
+Cấm xe ô tô khách
+Cấm người đi bộ
+Hạn chế tải trọng toàn bộ xe
+Hạn chế chiều cao
+Cấm rẽ trái
+Cấm rẽ phải
+Cấm quay đầu
+Cấm ô tô quay đầu
+Cấm rẽ trái và quay đầu xe
+Cấm vượt
+Tốc độ tối đa cho phép
+Cấm sử dụng còi
+Cấm dừng và đỗ xe
+Cấm đỗ xe
+Cấm rẽ trái và phải
+Đi chậm
+Chỉ được rẽ trái
+Chỉ được rẽ phải
+Các xe chỉ được rẽ trái
+Phải đi vòng sang bên phải
+Phải đi vòng sang bên trái
+Nơi giao nhau chạy theo vòng xuyến
+Đường một chiều
+Chỗ quay xe
+Bệnh viện
+Bến xe buýt
+Biển Thuyết minh
+Chỗ ngoặt nguy hiểm vòng bên trái
+Chỗ ngoặt nguy hiểm vòng bên phải
+Nhiều chỗ ngoặt nguy hiểm liên tiếp, chỗ đầu tiên sang trái
+Nhiều chỗ ngoặt nguy hiểm liên tiếp, chỗ đầu tiên sang phải
+Đường bị thu hẹp về phía trái
+Đường bị thu hẹp về phía phải
+Giao nhau với đường đồng cấp
+Đường giao nhau (ngã ba bên trái)
+Đường giao nhau dạng chữ T
+Giao nhau với đường không ưu tiên
+Giao nhau với đường không ưu tiên (bên phải)
+Giao nhau với đường không ưu tiên (bên trái)
+Giao nhau với đường ưu tiên
+Giao nhau có đèn tín hiệu
+Giao nhau với đường sắt có rào chắn
+Dốc nguy hiểm
+Gồ giảm tốc phía trước
+Đường người đi bộ cắt ngang
+Trẻ em
+Công trường đang thi công
+Nguy hiểm khác
+Đường đôi
+Đi chậm
+Đường có camera giám sát
+Cấm đi thẳng và rẽ phải
+Đường giao nhau (ngã ba bên phải)
+Chiều cao tĩnh không thực tế
+Chướng ngại vật phía trước
+Chú ý chướng ngại vật – vòng tránh sang bên phải
