@@ -1,2 +1,0 @@
-tìm các classId tồn tại độc lập trong dataset roboflow, tìm tên tiếng việt của các classID đó.
-tìm các ảnh mang id độc lập của dataset roboflow.
