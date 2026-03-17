@@ -6,7 +6,7 @@ from ultralytics import YOLO
 
 pygame.mixer.init()
 
-model = YOLO(r"C:\Users\W11\Downloads\dataset\best.pt")
+model = YOLO(r"./best.pt")
 
 SIGN_DIR = "reference_signs"
 AUDIO_DIR = "audio_warnings" 
