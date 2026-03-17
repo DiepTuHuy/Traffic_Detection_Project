@@ -5,8 +5,7 @@ __pycache__/
 
 # Dataset & weights
 datasets/
-data/*.zip
-*.pt
+*.zip
 *.onnx
 
 # Jupyter
@@ -15,3 +14,4 @@ data/*.zip
 # IDE
 .vscode/
 .idea/
+.runs/
