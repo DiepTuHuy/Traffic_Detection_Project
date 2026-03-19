@@ -9,9 +9,6 @@ IMAGE_PATH = r"C:\Users\Admin\Downloads\archive\archive\images\1704.jpg"
 CONF_THRESHOLD = 0.4
 
 def draw_text_pillow(img, text, pos, color=(255, 255, 255), bg_color=(0, 0, 0)):
-    """
-    Hàm vẽ chữ tiếng Việt lên ảnh OpenCV bằng thư viện Pillow
-    """
     img_pil = Image.fromarray(cv2.cvtColor(img, cv2.COLOR_BGR2RGB))
     draw = ImageDraw.Draw(img_pil)
     
