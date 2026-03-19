@@ -1,2 +1,0 @@
-yolo11n: ko có data augment - acc Hưng
-
