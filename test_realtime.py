@@ -8,8 +8,8 @@ pygame.mixer.init()
 
 model = YOLO(r"./best.pt")
 
-SIGN_DIR = "reference_signs"
-AUDIO_DIR = "audio_warnings" 
+SIGN_DIR = "reference"
+AUDIO_DIR = "audio" 
 OVERLAY_SIZE = (150, 150)
 
 sign_images = {}
