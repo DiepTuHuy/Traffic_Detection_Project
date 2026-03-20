@@ -15,3 +15,5 @@ datasets/
 .vscode/
 .idea/
 .runs/
+*.mp4
+*.MOV
