@@ -26,6 +26,7 @@ Dữ liệu hình ảnh và nhãn (labels) sử dụng để huấn luyện cho 
 * 🔗 **[Dataset dành cho mô hình YOLO12m](https://drive.google.com/file/d/1w96o2FKinrIKgN4tcoXGrbtahbLBW_sl/view?usp=drive_link)**
 * 🔗 **[Dataset dành cho mô hình YOLO11n](https://drive.google.com/file/d/14y5CRRBv-hb1uV3ZN1TZDYRlTo4a-uTw/view?usp=drive_link)**
 * 🔗 **[Dataset dành cho mô hình YOLO8n](https://drive.google.com/file/d/1o-YoYNe1gkA2GVFglH2fuG0TzdIE8bBG/view?usp=drive_link)**
-* 🔗 **[VIDEO demo](https://drive.google.com/file/d/1ye1zvq21VorXXc317cXkJUn_0agq6Gce/view?usp=sharing)**
+* 🔗 **[VIDEO demo buổi tối](https://drive.google.com/file/d/1ye1zvq21VorXXc317cXkJUn_0agq6Gce/view?usp=sharing)**
+* 🔗 **[VIDEO demo buổi sáng](https://drive.google.com/file/d/1CpR_RyvJQcR-XqOUoZlSAbNabECO0OFc/view?usp=sharing)**
   
 *(Lưu ý: Sau khi tải các bộ dataset từ link trên về máy, hãy giải nén và đảm bảo cập nhật đúng đường dẫn thư mục dataset bên trong các file `.ipynb` tương ứng trước khi bạn muốn chạy lại quá trình huấn luyện).*
