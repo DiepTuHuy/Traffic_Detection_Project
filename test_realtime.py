@@ -6,7 +6,7 @@ from ultralytics import YOLO
 
 pygame.mixer.init()
 
-model = YOLO(r"./best.pt")
+model = YOLO(r".\train\Yolo12m\best.pt")
 
 SIGN_DIR = "reference"
 AUDIO_DIR = "audio" 
@@ -15,7 +15,6 @@ OVERLAY_SIZE = (150, 150)
 sign_images = {}
 audio_files = {}
 
-# Tải trước đường dẫn ảnh
 if os.path.exists(SIGN_DIR):
     for filename in os.listdir(SIGN_DIR):
         name, _ = os.path.splitext(filename)
@@ -66,7 +65,7 @@ while True:
                 last_played_time = current_time
                 last_played_class = class_name
 
-    cv2.imshow("Traffic Sign Detection (YOLO) with Audio", annotated_frame)
+    cv2.imshow("He Thong Nhan Dien Bien Bao Va Canh Bao Thong Minh", annotated_frame)
 
     if cv2.waitKey(1) & 0xFF == 27:
         break

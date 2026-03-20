@@ -4,8 +4,8 @@ from PIL import Image, ImageDraw, ImageFont
 from ultralytics import YOLO
 import os
 
-MODEL_PATH = r"C:\Users\Admin\Desktop\Study\PL_Python\Traffic_Detection_Project\best.pt" 
-IMAGE_PATH = r"C:\Users\Admin\Downloads\archive\archive\images\1704.jpg"
+MODEL_PATH = r".\train\Yolo12m\best.pt" 
+IMAGE_PATH = r".\test_image.jpg"
 CONF_THRESHOLD = 0.4
 
 def draw_text_pillow(img, text, pos, color=(255, 255, 255), bg_color=(0, 0, 0)):
