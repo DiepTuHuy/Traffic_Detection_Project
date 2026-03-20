@@ -17,3 +17,5 @@ datasets/
 .runs/
 *.mp4
 *.MOV
+*.jpg
+*.png
