@@ -19,12 +19,13 @@ Mỗi thư mục con này đều chứa 3 thành phần quan trọng sau:
 2. **Kết quả huấn luyện:** Các file `.csv` ghi nhận lại chỉ số đánh giá của mô hình qua từng vòng lặp (epoch) như độ chính xác (mAP, precision, recall) và hàm mất mát (loss).
 3. **Mã nguồn huấn luyện:** Các file định dạng `.ipynb` chứa script chi tiết quá trình thiết lập, tải dữ liệu và huấn luyện mô hình.
 
-## 📊 Dataset (Dữ liệu huấn luyện)
+## 📊 Dataset
 
 Dữ liệu hình ảnh và nhãn (labels) sử dụng để huấn luyện cho dự án được chia làm 3 bộ riêng biệt, tối ưu cho từng phiên bản mô hình YOLO. Bạn có thể tải trực tiếp dữ liệu thông qua các link Google Drive dưới đây:
 
 * 🔗 **[Dataset dành cho mô hình YOLO12m](https://drive.google.com/file/d/1w96o2FKinrIKgN4tcoXGrbtahbLBW_sl/view?usp=drive_link)**
 * 🔗 **[Dataset dành cho mô hình YOLO11n](https://drive.google.com/file/d/14y5CRRBv-hb1uV3ZN1TZDYRlTo4a-uTw/view?usp=drive_link)**
 * 🔗 **[Dataset dành cho mô hình YOLO8n](https://drive.google.com/file/d/1o-YoYNe1gkA2GVFglH2fuG0TzdIE8bBG/view?usp=drive_link)**
-
+* 🔗 **[VIDEO demo](https://drive.google.com/file/d/1ye1zvq21VorXXc317cXkJUn_0agq6Gce/view?usp=sharing)**
+  
 *(Lưu ý: Sau khi tải các bộ dataset từ link trên về máy, hãy giải nén và đảm bảo cập nhật đúng đường dẫn thư mục dataset bên trong các file `.ipynb` tương ứng trước khi bạn muốn chạy lại quá trình huấn luyện).*
