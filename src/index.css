@@ -1,0 +1,98 @@
+@import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-hud-cyan: #00f0ff;
+  --color-hud-green: #10b981;
+  --color-hud-orange: #f59e0b;
+  --color-hud-red: #ef4444;
+  --font-sans: "Space Grotesk", "Inter", sans-serif;
+  --font-mono: "JetBrains Mono", "Courier New", monospace;
+}
+
+/* Smart Traffic Scanline grid effect */
+.cyber-grid {
+  background-image: 
+    linear-gradient(rgba(0, 240, 255, 0.05) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0, 240, 255, 0.05) 1px, transparent 1px);
+  background-size: 20px 20px;
+}
+
+.radar-sweep {
+  background: conic-gradient(from 180deg at 50% 50%, rgba(0, 240, 255, 0.15) 0deg, rgba(0, 240, 255, 0) 180deg);
+  animation: radar-rotate 4s linear infinite;
+}
+
+@keyframes radar-rotate {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Perspective road movement simulation */
+.road-perspective {
+  perspective: 200px;
+}
+
+.road-surface {
+  transform: rotateX(60deg);
+  transform-origin: top center;
+  background: linear-gradient(to bottom, #0f172a 0%, #1e293b 80%, #0f172a 100%);
+}
+
+.road-lines {
+  background-image: repeating-linear-gradient(to bottom, transparent, transparent 10px, #00f0ff 10px, #00f0ff 30px);
+  animation: road-flow 1.5s linear infinite;
+}
+
+@keyframes road-flow {
+  from { background-position: 0 0; }
+  to { background-position: 0 80px; }
+}
+
+/* Scanner bar line moving up and down the feed */
+.scanner-line {
+  background: linear-gradient(to bottom, transparent, rgba(0, 240, 255, 0.6) 50%, transparent);
+  animation: scan-vertical 3s ease-in-out infinite;
+}
+
+@keyframes scan-vertical {
+  0% { transform: translateY(-100%); }
+  50% { transform: translateY(300px); }
+  100% { transform: translateY(-100%); }
+}
+
+/* Glow effects */
+.neon-glow-cyan {
+  text-shadow: 0 0 8px rgba(0, 240, 255, 0.6), 0 0 20px rgba(0, 240, 255, 0.3);
+}
+
+.neon-border-cyan {
+  box-shadow: 0 0 10px rgba(0, 240, 255, 0.25), inset 0 0 10px rgba(0, 240, 255, 0.15);
+  border: 1px solid rgba(0, 240, 255, 0.4);
+}
+
+.neon-glow-red {
+  text-shadow: 0 0 8px rgba(239, 68, 68, 0.6);
+}
+
+.neon-border-red {
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.4), inset 0 0 8px rgba(239, 68, 68, 0.2);
+  border: 1px solid rgba(239, 68, 68, 0.6);
+}
+
+/* Custom scrollbars */
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+::-webkit-scrollbar-track {
+  background: rgba(15, 23, 42, 0.3);
+}
+::-webkit-scrollbar-thumb {
+  background: rgba(0, 240, 255, 0.3);
+  border-radius: 3px;
+}
+::-webkit-scrollbar-thumb:hover {
+  background: rgba(0, 240, 255, 0.6);
+}
+

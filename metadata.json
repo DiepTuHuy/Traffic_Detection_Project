@@ -1,0 +1,10 @@
+{
+  "name": "Smart Driver HUD - Traffic Sign Detection AI",
+  "description": "Giao diện giám sát và nhận diện biển báo giao thông thời gian thực thông minh, tích hợp Trợ lý Trí tuệ Nhân tạo hỗ trợ lái xe an toàn, tối ưu dark mode, hiệu ứng HUD tương lai.",
+  "requestFramePermissions": [
+    "camera"
+  ],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -1,21 +1,8 @@
-# Python
-__pycache__/
-*.pyc
-.env
-
-# Dataset & weights
-datasets/
-*.zip
-*.onnx
-
-# Jupyter
-.ipynb_checkpoints/
-
-# IDE
-.vscode/
-.idea/
-.runs/
-*.mp4
-*.MOV
-*.jpg
-*.png
+node_modules/
+build/
+dist/
+coverage/
+.DS_Store
+*.log
+.env*
+!.env.example
