@@ -49,7 +49,7 @@ if model is None:
     print("CRITICAL: No YOLO model found! Please check train/ directory.")
 
 # Cấu hình inference 
-CONFIDENCE_THRESHOLD = 0.50  # Mức 50% là điểm cân bằng giữa độ nhạy và chống ảo giác
+CONFIDENCE_THRESHOLD = 0.25  # Hạ thấp nhất để tăng độ nhạy tối đa
 IMAGE_SIZE = 416             # Giảm kích thước ảnh để tăng tốc inference trên CPU
 
 @app.route("/predict", methods=["POST", "OPTIONS"])
@@ -87,7 +87,19 @@ def predict():
         if model is None:
             return jsonify({"detected": False, "error": "Model not loaded"})
 
-        results = model(img_cv2, imgsz=IMAGE_SIZE, conf=CONFIDENCE_THRESHOLD, verbose=False)
+        # ===============================================================
+        # TIỀN XỬ LÝ ẢNH SIÊU NHANH - Chỉ dùng CLAHE (~5ms)
+        # ===============================================================
+        # CLAHE - Tăng tương phản cục bộ (hiệu quả cho ảnh tối/chói)
+        lab = cv2.cvtColor(img_cv2, cv2.COLOR_BGR2LAB)
+        l, a, b = cv2.split(lab)
+        clahe = cv2.createCLAHE(clipLimit=3.0, tileGridSize=(8, 8))
+        l = clahe.apply(l)
+        img_enhanced = cv2.merge([l, a, b])
+        img_enhanced = cv2.cvtColor(img_enhanced, cv2.COLOR_LAB2BGR)
+
+        # Chạy model 1 lần duy nhất trên ảnh đã tăng cường
+        results = model(img_enhanced, imgsz=IMAGE_SIZE, conf=CONFIDENCE_THRESHOLD, verbose=False)
         
         # Tìm box có độ tin cậy cao nhất
         best_box = None

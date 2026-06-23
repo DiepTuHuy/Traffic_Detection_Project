@@ -87,6 +87,9 @@ export default function App() {
   const [selectedCategory, setSelectedCategory] = useState<string>("all");
 
   const [isCameraScanning, setIsCameraScanning] = useState<boolean>(false);
+  const [scanStatus, setScanStatus] = useState<'idle' | 'scanning' | 'detected' | 'not-detected'>('idle');
+  const noDetectCountRef = useRef<number>(0);
+  const lastBeepTimeRef = useRef<number>(0);
 
   // File Upload States
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
@@ -491,12 +494,13 @@ export default function App() {
           ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
           
           // Chuyển sang Base64 dạng ảnh jpeg tối ưu
-          const base64Image = canvas.toDataURL('image/jpeg', 0.8);
+          const base64Image = canvas.toDataURL('image/jpeg', 0.95); // Tăng chất lượng ảnh gửi đi
           
           try {
             setIsCameraScanning(true);
+            setScanStatus('scanning');
             const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 15000); // 15 giây cho Yolo12m
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
             
             const response = await fetch(modelEndpointUrl, {
               method: 'POST',
@@ -509,6 +513,10 @@ export default function App() {
             if (response.ok) {
               const data = await response.json();
               if (data.detected && data.code) {
+                // Reset bộ đếm không phát hiện
+                noDetectCountRef.current = 0;
+                setScanStatus('detected');
+
                 // Tra cứu biển báo qua bảng mapping nhãn YOLO
                 const matchedSign = YOLO_LABEL_MAP[data.code]
                   || VIETNAM_ROAD_SIGNS.find(s => s.yoloLabel === data.code)
@@ -525,14 +533,13 @@ export default function App() {
                 setScanConfidence(data.confidence || 98.7);
                 setCurrentDistance(data.distance || 30);
                 // Phát âm thanh cảnh báo tiếng Việt khi camera nhận diện
-                if (matchedSign.yoloLabel) playSignAudio(matchedSign.yoloLabel);
+                playSignAudio(data.code); // Dùng data.code (nhãn YOLO gốc) vì matchedSign.yoloLabel có thể undefined
                 if (matchedSign.speedLimit) {
                   setTargetSpeedLimit(matchedSign.speedLimit);
                 }
                 
                 const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
                 setLogs((prev) => {
-                  // Chỉ thêm log nếu biển báo này khác biển báo vừa log gần nhất (tránh spam liên tục)
                   if (prev.length > 0 && prev[0].signCode === matchedSign.code && (new Date().getTime() - new Date("1970/01/01 " + prev[0].timestamp).getTime() < 3000)) {
                     return prev; 
                   }
@@ -550,12 +557,49 @@ export default function App() {
                     ...prev.slice(0, 14)
                   ];
                 });
+              } else {
+                // Không phát hiện biển báo trong frame này
+                noDetectCountRef.current += 1;
+                setScanStatus('not-detected');
+
+                // Phát tiếng beep cảnh báo mỗi 5 giây liên tục không detect
+                if (noDetectCountRef.current >= 5) {
+                  const now = Date.now();
+                  if (now - lastBeepTimeRef.current > 5000) {
+                    lastBeepTimeRef.current = now;
+                    // Tạo tiếng beep ngắn bằng Web Audio API
+                    try {
+                      const audioCtx = new (window.AudioContext || (window as any).webkitAudioContext)();
+                      const oscillator = audioCtx.createOscillator();
+                      const gainNode = audioCtx.createGain();
+                      oscillator.connect(gainNode);
+                      gainNode.connect(audioCtx.destination);
+                      oscillator.frequency.value = 880; // Tần số A5
+                      oscillator.type = 'sine';
+                      gainNode.gain.value = 0.3;
+                      oscillator.start();
+                      oscillator.stop(audioCtx.currentTime + 0.15); // Beep 150ms
+                      setTimeout(() => {
+                        // Beep lần 2 (double beep)
+                        const osc2 = audioCtx.createOscillator();
+                        const gain2 = audioCtx.createGain();
+                        osc2.connect(gain2);
+                        gain2.connect(audioCtx.destination);
+                        osc2.frequency.value = 880;
+                        osc2.type = 'sine';
+                        gain2.gain.value = 0.3;
+                        osc2.start();
+                        osc2.stop(audioCtx.currentTime + 0.15);
+                      }, 200);
+                    } catch (e) { /* Ignore audio errors */ }
+                  }
+                }
               }
             }
           } catch (error) {
             // Drop frame nếu quá thời gian hoặc lỗi
+            setScanStatus('not-detected');
           } finally {
-            // Khôi phục UI sau một khoảng delay nhỏ để tránh giật lag UI liên tục
             setTimeout(() => setIsCameraScanning(false), 200);
           }
         }
@@ -563,7 +607,7 @@ export default function App() {
     };
 
     if (cameraActive && useCustomModel) {
-      intervalId = setInterval(captureAndSendFrame, 1000); // 1 frame mỗi giây để cập nhật nhanh
+      intervalId = setInterval(captureAndSendFrame, 1000); // 1 frame mỗi giây
     }
 
     return () => {
@@ -756,14 +800,11 @@ export default function App() {
           <div>
             <div className="flex items-center gap-2">
               <h1 className="text-lg font-bold tracking-wider text-slate-100 uppercase font-sans">
-                Aegis <span className="text-hud-cyan neon-glow-cyan">HUD AI</span>
+                <span className="text-hud-cyan neon-glow-cyan">NHẬN DIỆN BIỂN BÁO GIAO THÔNG AI QUA CAMERA</span>
               </h1>
-              <span className="text-[9px] font-mono px-1.5 py-0.5 rounded bg-hud-cyan/15 text-hud-cyan border border-hud-cyan/30 tracking-widest uppercase">
-                v2.4 Smart-Eye
-              </span>
             </div>
-            <p className="text-[10px] text-slate-400 font-mono tracking-tight">
-              TRÍ TUỆ NHÂN TẠO NHẬN DIỆN BIỂN BÁO & GIÁM SÁT HÀNH TRÌNH THÔNG MINH
+            <p className="text-[10px] text-slate-400 font-mono tracking-tight mt-1">
+              HỆ THỐNG TRÍ TUỆ NHÂN TẠO PHÂN TÍCH HÌNH ẢNH THEO THỜI GIAN THỰC
             </p>
           </div>
         </div>
@@ -1242,16 +1283,24 @@ if __name__ == "__main__":
                       />
                       <canvas ref={canvasRef} className="hidden" />
 
-                      {/* Scanning Indicator Overlay */}
-                      {isCameraScanning && (
-                        <div className="absolute top-4 right-4 bg-slate-900/80 border border-hud-cyan text-hud-cyan text-[10px] font-mono px-3 py-1.5 rounded-full flex items-center gap-2 animate-pulse z-10">
-                          <span className="relative flex h-2 w-2">
-                            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-hud-cyan opacity-75"></span>
-                            <span className="relative inline-flex rounded-full h-2 w-2 bg-hud-cyan"></span>
-                          </span>
-                          ĐANG QUÉT AI...
-                        </div>
-                      )}
+                      {/* Scanning Status Indicator Overlay */}
+                      <div className={`absolute top-4 right-4 bg-slate-900/90 border text-[10px] font-mono px-3 py-1.5 rounded-full flex items-center gap-2 z-10 transition-all duration-300 ${
+                        scanStatus === 'detected' 
+                          ? 'border-emerald-400 text-emerald-400' 
+                          : scanStatus === 'not-detected' 
+                            ? 'border-amber-400 text-amber-400' 
+                            : 'border-hud-cyan text-hud-cyan animate-pulse'
+                      }`}>
+                        <span className="relative flex h-2 w-2">
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                            scanStatus === 'detected' ? 'bg-emerald-400' : scanStatus === 'not-detected' ? 'bg-amber-400' : 'bg-hud-cyan'
+                          }`}></span>
+                          <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                            scanStatus === 'detected' ? 'bg-emerald-400' : scanStatus === 'not-detected' ? 'bg-amber-400' : 'bg-hud-cyan'
+                          }`}></span>
+                        </span>
+                        {scanStatus === 'detected' ? '✅ ĐÃ PHÁT HIỆN' : scanStatus === 'not-detected' ? '⚠️ KHÔNG PHÁT HIỆN' : '📡 ĐANG QUÉT AI...'}
+                      </div>
 
                       {/* Neural Scanner Overlay crosshairs */}
                       <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
