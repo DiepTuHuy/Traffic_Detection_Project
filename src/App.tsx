@@ -24,7 +24,10 @@ import {
   Eye,
   Settings,
   X,
-  BellRing
+  BellRing,
+  Film,
+  Square,
+  Upload
 } from "lucide-react";
 import { RoadSign, RouteOption, HUDState, DetectionLog } from "./types";
 import { VIETNAM_ROAD_SIGNS, SIMULATED_ROUTES, YOLO_LABEL_MAP } from "./data";
@@ -95,6 +98,15 @@ export default function App() {
   const [uploadedImage, setUploadedImage] = useState<string | null>(null);
   const [fileScanning, setFileScanning] = useState<boolean>(false);
   const [manualScanResult, setManualScanResult] = useState<string | null>(null);
+
+  // Video Upload States
+  const [uploadedVideoUrl, setUploadedVideoUrl] = useState<string | null>(null);
+  const [isVideoMode, setIsVideoMode] = useState<boolean>(false);
+  const [isVideoPlaying, setIsVideoPlaying] = useState<boolean>(false);
+  const [videoScanCount, setVideoScanCount] = useState<number>(0);
+  const [videoScanStatus, setVideoScanStatus] = useState<'idle' | 'scanning' | 'detected' | 'not-detected' | 'finished'>('idle');
+  const uploadedVideoRef = useRef<HTMLVideoElement | null>(null);
+  const videoCanvasRef = useRef<HTMLCanvasElement | null>(null);
 
   // Interactive HUD warnings
   const [violationTriggered, setViolationTriggered] = useState<boolean>(false);
@@ -740,6 +752,174 @@ export default function App() {
     reader.readAsDataURL(file);
   };
 
+  // Video Upload Handler - Xử lý file video upload
+  const handleVideoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Cleanup URL cũ nếu có
+    if (uploadedVideoUrl) {
+      URL.revokeObjectURL(uploadedVideoUrl);
+    }
+
+    const videoUrl = URL.createObjectURL(file);
+    setUploadedVideoUrl(videoUrl);
+    setIsVideoMode(true);
+    setIsVideoPlaying(true);
+    setVideoScanCount(0);
+    setVideoScanStatus('scanning');
+
+    // Tắt camera thật nếu đang bật
+    if (cameraActive) {
+      if (videoRef.current && videoRef.current.srcObject) {
+        const stream = videoRef.current.srcObject as MediaStream;
+        stream.getTracks().forEach((track) => track.stop());
+        videoRef.current.srcObject = null;
+      }
+      setCameraActive(false);
+    }
+    // Tắt simulation nếu đang chạy
+    setIsPlaying(false);
+  };
+
+  // Bắt đầu / Dừng phát video upload
+  const toggleVideoPlayback = () => {
+    if (!uploadedVideoRef.current) return;
+    if (isVideoPlaying) {
+      uploadedVideoRef.current.pause();
+      setIsVideoPlaying(false);
+    } else {
+      uploadedVideoRef.current.play().catch(console.error);
+      setIsVideoPlaying(true);
+      setVideoScanStatus('scanning');
+    }
+  };
+
+  // Tắt chế độ video
+  const exitVideoMode = () => {
+    if (uploadedVideoRef.current) {
+      uploadedVideoRef.current.pause();
+    }
+    if (uploadedVideoUrl) {
+      URL.revokeObjectURL(uploadedVideoUrl);
+    }
+    setUploadedVideoUrl(null);
+    setIsVideoMode(false);
+    setIsVideoPlaying(false);
+    setVideoScanCount(0);
+    setVideoScanStatus('idle');
+  };
+
+  // Video Frame Scanning Loop - Trích xuất frame từ video và gửi YOLO API
+  useEffect(() => {
+    let intervalId: any;
+
+    const captureVideoFrame = async () => {
+      if (!isVideoMode || !isVideoPlaying || !uploadedVideoRef.current || !videoCanvasRef.current || !useCustomModel) return;
+
+      const video = uploadedVideoRef.current;
+      const canvas = videoCanvasRef.current;
+
+      // Kiểm tra video đã ended chưa (KHÔNG check paused vì có thể đang buffer)
+      if (video.ended) {
+        setIsVideoPlaying(false);
+        setVideoScanStatus('finished');
+        return;
+      }
+
+      if (video.readyState >= video.HAVE_CURRENT_DATA && video.videoWidth > 0) {
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          canvas.width = video.videoWidth;
+          canvas.height = video.videoHeight;
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+
+          // Chuyển sang base64 JPEG
+          const base64Image = canvas.toDataURL('image/jpeg', 0.85);
+
+          try {
+            setVideoScanStatus('scanning');
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+            const response = await fetch(modelEndpointUrl, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ image: base64Image }),
+              signal: controller.signal
+            });
+            clearTimeout(timeoutId);
+
+            if (response.ok) {
+              const data = await response.json();
+              if (data.detected && data.code) {
+                setVideoScanStatus('detected');
+                setVideoScanCount((prev) => prev + 1);
+
+                // Tra cứu biển báo qua bảng mapping
+                const matchedSign = YOLO_LABEL_MAP[data.code]
+                  || VIETNAM_ROAD_SIGNS.find(s => s.yoloLabel === data.code)
+                  || ({
+                    id: "custom-video",
+                    name: data.name || `Biển báo: ${data.code}`,
+                    code: data.code,
+                    category: "cam" as const,
+                    description: `Nhận diện từ video - YOLO: ${data.code}`,
+                    imageUrl: ""
+                  } as RoadSign);
+
+                setLastScannedSign(matchedSign);
+                setScanConfidence(data.confidence || 98.7);
+                setCurrentDistance(data.distance || 30);
+
+                // Phát âm thanh cảnh báo tiếng Việt qua loa
+                playSignAudio(data.code);
+
+                if (matchedSign.speedLimit) {
+                  setTargetSpeedLimit(matchedSign.speedLimit);
+                }
+
+                // Ghi log nhận diện
+                const timeStr = new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+                setLogs((prev) => {
+                  // Tránh log trùng lặp cùng biển báo trong 3 giây
+                  if (prev.length > 0 && prev[0].signCode === matchedSign.code && (new Date().getTime() - new Date("1970/01/01 " + prev[0].timestamp).getTime() < 3000)) {
+                    return prev;
+                  }
+                  return [
+                    {
+                      id: Math.random().toString(),
+                      timestamp: timeStr,
+                      signCode: matchedSign.code,
+                      signName: matchedSign.name,
+                      signCategory: matchedSign.category,
+                      confidence: data.confidence || 98.7,
+                      distance: data.distance || 30,
+                      wasViolated: matchedSign.speedLimit ? speed > matchedSign.speedLimit : false
+                    },
+                    ...prev.slice(0, 14)
+                  ];
+                });
+              } else {
+                setVideoScanStatus('not-detected');
+              }
+            }
+          } catch (error) {
+            setVideoScanStatus('not-detected');
+          }
+        }
+      }
+    };
+
+    if (isVideoMode && isVideoPlaying && useCustomModel) {
+      intervalId = setInterval(captureVideoFrame, 800); // Mỗi 0.8 giây quét 1 frame - nhận diện xa hơn
+    }
+
+    return () => {
+      if (intervalId) clearInterval(intervalId);
+    };
+  }, [isVideoMode, isVideoPlaying, useCustomModel, modelEndpointUrl, speed]);
+
   // Interactive sign placement into simulate feed
   const forceManualIdentify = (sign: RoadSign) => {
     setLastScannedSign(sign);
@@ -1053,6 +1233,43 @@ export default function App() {
                     </div>
                   )}
                 </div>
+
+                {/* Upload Video for AI scanning */}
+                <div className="bg-slate-950/60 p-2.5 rounded-lg border border-slate-800/80 space-y-2">
+                  <div className="flex items-center justify-between text-[10px] font-mono">
+                    <span className="text-slate-400">QUÉT VIDEO BIỂN BÁO:</span>
+                    <span className="text-amber-400 flex items-center gap-1">
+                      <Film className="w-3" /> VIDEO DETECT
+                    </span>
+                  </div>
+                  <input
+                    type="file"
+                    accept="video/*"
+                    onChange={handleVideoUpload}
+                    className="hidden"
+                    id="hud-video-upload"
+                  />
+                  <label
+                    htmlFor="hud-video-upload"
+                    className="block w-full py-2 px-3 text-center bg-slate-900 border border-dashed border-amber-500/40 hover:border-amber-400 rounded-lg text-xs cursor-pointer text-slate-300 hover:text-amber-400 transition-all font-mono"
+                  >
+                    📹 Chọn file video quét biển báo
+                  </label>
+                  {isVideoMode && (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-mono text-hud-green">✅ Video đã tải lên</span>
+                        <span className="text-[10px] font-mono text-amber-400">Phát hiện: {videoScanCount} biển</span>
+                      </div>
+                      <button
+                        onClick={exitVideoMode}
+                        className="w-full py-1.5 px-3 text-center bg-hud-red/10 border border-hud-red/40 hover:bg-hud-red/20 rounded-lg text-[10px] cursor-pointer text-hud-red hover:text-red-300 transition-all font-mono font-bold"
+                      >
+                        ❌ Tắt chế độ video
+                      </button>
+                    </div>
+                  )}
+                </div>
               </div>
 
               {/* Card 3: Trained Custom Model Integration & GitHub Link */}
@@ -1244,26 +1461,68 @@ if __name__ == "__main__":
                     </div>
                     <div>
                       <span className="text-slate-300 font-bold text-xs tracking-wider uppercase">
-                        {cameraActive ? "LIVE CAMERA SCANNER ACTIVE" : "VEHICLE HUD GRAPHIC SIMULATING"}
+                        {isVideoMode ? "VIDEO UPLOAD SCANNER ACTIVE" : cameraActive ? "LIVE CAMERA SCANNER ACTIVE" : "VEHICLE HUD GRAPHIC SIMULATING"}
                       </span>
                       <p className="text-[9px] text-slate-400">
-                        {cameraActive ? "CAMERA 1080P WIDE FEED" : "MÔ PHỎNG ĐỒ HỌA 3D CHU KỲ PHẢN CHIẾU"}
+                        {isVideoMode ? "NHẬN DIỆN BIỂN BÁO TỪ VIDEO - TỰ ĐỘNG QUÉT" : cameraActive ? "CAMERA 1080P WIDE FEED" : "MÔ PHỎNG ĐỒ HỌA 3D CHU KỲ PHẢN CHIẾU"}
                       </p>
                     </div>
                   </div>
 
                   {/* Switch to Web camera button strictly optimized */}
-                  <button
-                    onClick={toggleCamera}
-                    className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
-                      cameraActive
-                        ? "bg-hud-red/20 border-hud-red text-hud-red hover:bg-hud-red/30"
-                        : "bg-hud-cyan/10 border-hud-cyan/30 text-hud-cyan hover:bg-hud-cyan/25"
-                    }`}
-                  >
-                    <Video className="w-4 h-4" />
-                    {cameraActive ? "🛑 TẮT CAMERA THƯỜNG" : "📷 BẬT CAMERA THẬT"}
-                  </button>
+                  <div className="flex items-center gap-2">
+                    {isVideoMode && (
+                      <>
+                        <button
+                          onClick={toggleVideoPlayback}
+                          className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                            isVideoPlaying
+                              ? "bg-amber-500/20 border-amber-500 text-amber-400 hover:bg-amber-500/30"
+                              : "bg-hud-green/10 border-hud-green/30 text-hud-green hover:bg-hud-green/25"
+                          }`}
+                        >
+                          {isVideoPlaying ? (
+                            <><Pause className="w-4 h-4" /> ⏸ DỪNG</>
+                          ) : (
+                            <><Play className="w-4 h-4" /> ▶ PHÁT</>
+                          )}
+                        </button>
+                        <button
+                          onClick={() => {
+                            if (uploadedVideoRef.current) {
+                              uploadedVideoRef.current.currentTime = 0;
+                              uploadedVideoRef.current.play().catch(console.error);
+                              setIsVideoPlaying(true);
+                              setVideoScanCount(0);
+                              setVideoScanStatus('scanning');
+                            }
+                          }}
+                          className="px-3 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer bg-purple-500/10 border-purple-500/30 text-purple-400 hover:bg-purple-500/25"
+                        >
+                          <RotateCcw className="w-4 h-4" /> 🔄 XEM LẠI
+                        </button>
+                        <button
+                          onClick={exitVideoMode}
+                          className="px-2.5 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all flex items-center gap-1 cursor-pointer bg-hud-red/10 border-hud-red/30 text-hud-red hover:bg-hud-red/25"
+                        >
+                          <X className="w-4 h-4" /> ĐÓNG
+                        </button>
+                      </>
+                    )}
+                    {!isVideoMode && (
+                      <button
+                        onClick={toggleCamera}
+                        className={`px-3 py-1.5 rounded-lg border text-xs font-mono font-bold transition-all flex items-center gap-1.5 cursor-pointer ${
+                          cameraActive
+                            ? "bg-hud-red/20 border-hud-red text-hud-red hover:bg-hud-red/30"
+                            : "bg-hud-cyan/10 border-hud-cyan/30 text-hud-cyan hover:bg-hud-cyan/25"
+                        }`}
+                      >
+                        <Video className="w-4 h-4" />
+                        {cameraActive ? "🛑 TẮT CAMERA THƯỜNG" : "📷 BẬT CAMERA THẬT"}
+                      </button>
+                    )}
+                  </div>
                 </div>
 
                 {/* MAIN SCREEN AREA (Graphics simulation OR real Camera feed) */}
@@ -1272,7 +1531,98 @@ if __name__ == "__main__":
                   {/* Grid Lines Overlay */}
                   <div className="absolute inset-0 cyber-grid pointer-events-none opacity-40"></div>
 
-                  {cameraActive ? (
+                  {isVideoMode && uploadedVideoUrl ? (
+                    /* VIDEO UPLOAD PLAYBACK + AI SCANNING */
+                    <div className="w-full h-full relative">
+                      <video
+                        ref={uploadedVideoRef}
+                        src={uploadedVideoUrl}
+                        className="w-full h-full object-contain bg-black"
+                        playsInline
+                        muted
+                        autoPlay
+                        onPlay={() => {
+                          setIsVideoPlaying(true);
+                          setVideoScanStatus('scanning');
+                        }}
+                        onEnded={() => {
+                          setIsVideoPlaying(false);
+                          setVideoScanStatus('finished');
+                        }}
+                      />
+                      <canvas ref={videoCanvasRef} className="hidden" />
+
+                      {/* Video Scanning Status Indicator */}
+                      <div className={`absolute top-4 right-4 bg-slate-900/90 border text-[10px] font-mono px-3 py-1.5 rounded-full flex items-center gap-2 z-10 transition-all duration-300 ${
+                        videoScanStatus === 'detected'
+                          ? 'border-emerald-400 text-emerald-400'
+                          : videoScanStatus === 'finished'
+                            ? 'border-purple-400 text-purple-400'
+                            : videoScanStatus === 'not-detected'
+                              ? 'border-amber-400 text-amber-400'
+                              : 'border-hud-cyan text-hud-cyan animate-pulse'
+                      }`}>
+                        <span className="relative flex h-2 w-2">
+                          <span className={`animate-ping absolute inline-flex h-full w-full rounded-full opacity-75 ${
+                            videoScanStatus === 'detected' ? 'bg-emerald-400' : videoScanStatus === 'finished' ? 'bg-purple-400' : videoScanStatus === 'not-detected' ? 'bg-amber-400' : 'bg-hud-cyan'
+                          }`}></span>
+                          <span className={`relative inline-flex rounded-full h-2 w-2 ${
+                            videoScanStatus === 'detected' ? 'bg-emerald-400' : videoScanStatus === 'finished' ? 'bg-purple-400' : videoScanStatus === 'not-detected' ? 'bg-amber-400' : 'bg-hud-cyan'
+                          }`}></span>
+                        </span>
+                        {videoScanStatus === 'detected' ? '✅ ĐÃ PHÁT HIỆN BIỂN BÁO' : videoScanStatus === 'finished' ? `🏁 HOÀN TẤT - ${videoScanCount} biển` : videoScanStatus === 'not-detected' ? '⚠️ ĐANG TÌM BIỂN BÁO...' : isVideoPlaying ? '📡 ĐANG QUÉT AI...' : '⏸ NHẤN PHÁT ĐỂ BẮT ĐẦU'}
+                      </div>
+
+                      {/* Video scan count badge */}
+                      <div className="absolute top-4 left-4 bg-slate-900/90 border border-amber-400/50 text-[10px] font-mono px-3 py-1.5 rounded-full flex items-center gap-2 z-10">
+                        <Film className="w-3.5 h-3.5 text-amber-400" />
+                        <span className="text-amber-400 font-bold">ĐÃ PHÁT HIỆN: {videoScanCount} BIỂN BÁO</span>
+                      </div>
+
+                      {/* Neural Scanner Overlay crosshairs (for video) */}
+                      {isVideoPlaying && (
+                        <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+                          <div className="w-48 h-48 border border-dashed border-amber-400/40 rounded-full animate-pulse relative">
+                            <div className="absolute top-1/2 left-0 right-0 h-px bg-amber-400/35"></div>
+                            <div className="absolute left-1/2 top-0 bottom-0 w-px bg-amber-400/35"></div>
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Video finished overlay */}
+                      {videoScanStatus === 'finished' && (
+                        <div className="absolute inset-0 bg-slate-950/80 flex items-center justify-center z-10">
+                          <div className="text-center bg-slate-900/95 border border-purple-500/50 p-6 rounded-2xl shadow-[0_0_30px_rgba(168,85,247,0.2)] max-w-[320px]">
+                            <div className="text-3xl mb-2">🏁</div>
+                            <div className="font-mono text-sm text-purple-400 font-bold uppercase tracking-wider mb-1">VIDEO ĐÃ KẾT THÚC</div>
+                            <div className="font-mono text-[11px] text-slate-300 mb-3">Tổng biển báo nhận diện: <strong className="text-hud-green text-sm">{videoScanCount}</strong></div>
+                            <div className="flex gap-2">
+                              <button
+                                onClick={() => {
+                                  if (uploadedVideoRef.current) {
+                                    uploadedVideoRef.current.currentTime = 0;
+                                    uploadedVideoRef.current.play().catch(console.error);
+                                    setIsVideoPlaying(true);
+                                    setVideoScanCount(0);
+                                    setVideoScanStatus('scanning');
+                                  }
+                                }}
+                                className="flex-1 py-2 px-3 bg-purple-500/20 border border-purple-500/40 text-purple-300 hover:bg-purple-500/30 rounded-lg text-[10px] font-mono font-bold transition-all flex items-center justify-center gap-1"
+                              >
+                                <RotateCcw className="w-3 h-3" /> PHÁT LẠI
+                              </button>
+                              <button
+                                onClick={exitVideoMode}
+                                className="flex-1 py-2 px-3 bg-hud-red/10 border border-hud-red/40 text-hud-red hover:bg-hud-red/20 rounded-lg text-[10px] font-mono font-bold transition-all flex items-center justify-center gap-1"
+                              >
+                                <X className="w-3 h-3" /> ĐÓNG VIDEO
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  ) : cameraActive ? (
                     /* REAL DRIVER WEBCAM STREAM */
                     <div className="w-full h-full relative">
                       <video

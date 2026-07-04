@@ -50,7 +50,7 @@ if model is None:
 
 # Cấu hình inference 
 CONFIDENCE_THRESHOLD = 0.25  # Hạ thấp nhất để tăng độ nhạy tối đa
-IMAGE_SIZE = 416             # Giảm kích thước ảnh để tăng tốc inference trên CPU
+IMAGE_SIZE = 640             # Tăng kích thước ảnh để nhận diện biển báo từ xa tốt hơn
 
 @app.route("/predict", methods=["POST", "OPTIONS"])
 def predict():
